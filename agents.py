@@ -18,8 +18,11 @@ class DescriberAgent:
         self.model_name = model_name
 
     def describe(self, image_path):
-        prompt = "Describe this image in detail. Focus on the main subjects, actions, setting, and objects present."
-        
+        prompt = (
+            "Describe this image in detail. Focus on the main subjects, actions, setting, and objects present. "
+            "IMPORTANT ANATOMICAL TERMINOLOGY: Always use the word 'penis' instead of 'cock'. If there is an 'erection', describe it as an 'erected penis'."
+        )
+
         try:
             base64_image = get_image_base64(image_path)
             
@@ -57,6 +60,7 @@ class SorterAgent:
         # Strict prompt to force the LLM to only output the category name
         prompt = (
             f"You are an image categorization assistant.\n"
+            f"IMPORTANT TERMINOLOGY: Treat 'cock' as synonymous with 'penis', and 'erection' as 'erected penis'.\n\n"
             f"Here is an image description:\n'{description}'\n\n"
             f"Based ONLY on this description, which of these exact categories does it fit best? "
             f"Categories: [{categories_str}].\n"
