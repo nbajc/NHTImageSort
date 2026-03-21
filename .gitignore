@@ -1,5 +1,56 @@
-
+# Python
 __pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+*.egg-info/
+
+# Data / ingested files
 demo_input/
 demo_output/
+data/
+*.db
+*.sqlite
+*.sqlite3
+*.jsonl
 
+# ChromaDB
+data/chromadb/
+chroma/
+
+# Images (don't push client data)
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.tiff
+*.bmp
+*.svg
+
+# IFC / BIM files
+*.ifc
+*.rvt
+*.nwd
+*.dwg
+
+# Node
+node_modules/
+dist/
+.next/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Keys
+*.pem
+*.key
+secrets.json
