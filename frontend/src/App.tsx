@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Loader2, FolderOpen, FolderOutput, Tags, Settings, Image as ImageIcon, AlertCircle, Trash2, Pencil, Search, X } from 'lucide-react';
+import { API_URL } from './config';
+import CloudBanner from './CloudBanner';
 
 interface JobState {
   status: 'idle' | 'starting' | 'running' | 'completed' | 'error';
@@ -31,7 +33,7 @@ function App() {
 
   const fetchCatalog = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/search');
+      const res = await fetch(`${API_URL}/api/search`);
       const data = await res.json();
       if (data.results) setCatalog(data.results);
     } catch (err) {
@@ -72,7 +74,7 @@ function App() {
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/status');
+      const res = await fetch(`${API_URL}/api/status`);
       const data = await res.json();
       setJobState(data);
       if (data.status === 'completed' || data.status === 'error') {
@@ -100,7 +102,7 @@ function App() {
   useEffect(() => {
     if (searchQuery.trim().length > 0) {
       const delayDebounceFn = setTimeout(() => {
-        fetch(`http://127.0.0.1:5000/api/search?q=${encodeURIComponent(searchQuery)}`)
+        fetch(`${API_URL}/api/search?q=${encodeURIComponent(searchQuery)}`)
           .then(res => res.json())
           .then(data => {
             if (data.results) {
@@ -121,7 +123,7 @@ function App() {
     try {
       localStorage.setItem('nexus_categories', categories);
       const catArray = categories.split(',').map(c => c.trim()).filter(c => c);
-      await fetch('http://127.0.0.1:5000/api/start', {
+      await fetch(`${API_URL}/api/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -150,7 +152,7 @@ function App() {
     if (!removePath) return;
     if (!confirm(`Are you sure you want to delete folder: ${removePath}?`)) return;
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/delete_folder', {
+      const res = await fetch(`${API_URL}/api/delete_folder`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: removePath })
@@ -170,7 +172,7 @@ function App() {
     if (!confirm("This will permanently scan and delete all physically identical images from your sorted target folders. Only one exact copy will be preserved. Continue?")) return;
     try {
       setIsRemovingDoubles(true);
-      const res = await fetch('http://127.0.0.1:5000/api/remove_doubles', {
+      const res = await fetch(`${API_URL}/api/remove_doubles`, {
         method: 'POST'
       });
       const data = await res.json();
@@ -190,7 +192,7 @@ function App() {
   const handleDeleteItem = async (filePath: string) => {
     if (!confirm(`Delete image ${filePath}?`)) return;
     try {
-      const res = await fetch('http://127.0.0.1:5000/api/delete_item', {
+      const res = await fetch(`${API_URL}/api/delete_item`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: filePath })
@@ -215,7 +217,7 @@ function App() {
     try {
       let updatedProjectTag: string | undefined = undefined;
       if (!dryRun) {
-        const res = await fetch('http://127.0.0.1:5000/api/update_item', {
+        const res = await fetch(`${API_URL}/api/update_item`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ path: filePath, description: editDesc })
@@ -279,8 +281,8 @@ function App() {
            className="bg-black/30 rounded-xl overflow-hidden shadow-lg border border-[#ffffff0a] flex flex-col hover:border-[#ffffff30] hover:ring-1 hover:ring-primary/50 transition-all cursor-pointer group/card relative min-h-[260px]">
         
         <div className="h-[120px] bg-[#110e1a] w-full relative overflow-hidden flex items-center justify-center border-b border-white/5">
-          {!res.placeholder && res.new_path ? (
-            <img src={`http://127.0.0.1:5000/api/image?path=${encodeURIComponent(res.new_path)}`} className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-700" alt="thumbnail" />
+          {!res.placeholder && (res.new_path || res.id) ? (
+            <img src={res.id ? `${API_URL}/api/image?id=${res.id}` : `${API_URL}/api/image?path=${encodeURIComponent(res.new_path)}`} className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-700" alt="thumbnail" />
           ) : (
             <ImageIcon className="w-8 h-8 text-white/20" />
           )}
@@ -314,6 +316,7 @@ function App() {
 
   return (
     <div className="min-h-screen font-sans p-6 md:p-12 selection:bg-primary selection:text-white">
+      <CloudBanner />
       <header className="mb-10 text-center md:text-left flex flex-col md:flex-row items-center md:items-start gap-6 lg:gap-8">
         <div className="w-24 h-24 md:w-32 md:h-32 bg-black/40 border border-primary/20 rounded-xl p-3 shadow-[0_0_25px_rgba(236,72,153,0.2)] shrink-0 flex items-center justify-center">
           <img src="/logo.jpg" className="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(236,72,153,0.4)]" alt="Nexus Hestia Logo" />
@@ -557,7 +560,7 @@ function App() {
             {/* Left side: Full Image */}
             <div className="w-full md:w-2/3 bg-black/50 flex flex-col items-center justify-center relative min-h-[300px] border-b md:border-b-0 md:border-r border-white/5 p-4">
                {!modalImage.placeholder ? (
-                 <img src={`http://127.0.0.1:5000/api/image?path=${encodeURIComponent(modalImage.new_path || modalImage.original_path || ('/path/' + modalImage.file))}`} className="max-w-full max-h-[85vh] object-contain drop-shadow-2xl rounded" alt={modalImage.file} />
+                 <img src={modalImage.id ? `${API_URL}/api/image?id=${modalImage.id}` : `${API_URL}/api/image?path=${encodeURIComponent(modalImage.new_path || modalImage.original_path || ('/path/' + modalImage.file))}`} className="max-w-full max-h-[85vh] object-contain drop-shadow-2xl rounded" alt={modalImage.file} />
                ) : (
                  <div className="flex flex-col items-center text-textMuted opacity-50"><ImageIcon className="w-20 h-20 mb-4"/><span>Placeholder Image</span></div>
                )}
