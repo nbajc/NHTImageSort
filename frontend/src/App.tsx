@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Play, Loader2, FolderOpen, FolderOutput, Tags, Settings, Image as ImageIcon, AlertCircle, Trash2, Pencil, Search, X } from 'lucide-react';
 import { API_URL } from './config';
 import CloudBanner from './CloudBanner';
+//import { API_URL } from './config';
+//import CloudBanner from './CloudBanner';
 
 interface JobState {
   status: 'idle' | 'starting' | 'running' | 'completed' | 'error';
