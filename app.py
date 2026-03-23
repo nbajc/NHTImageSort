@@ -434,5 +434,14 @@ def remove_doubles():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+#if __name__ == "__main__":
+# app.run(debug=True, port=5000)
+# this is for the local server
+if __name__ == '__main__':
+    # 1. Look for the PORT environment variable provided by Railway
+    # 2. Default to 5000 if running locally (where the variable doesn't exist)
+    port = int(os.environ.get("PORT", 5000))
+    
+    # 3. host='0.0.0.0' is REQUIRED for Railway to talk to Vercel
+    # 4. Turn debug=False for production to improve security and performance
+    app.run(host='0.0.0.0', port=port, debug=False)
