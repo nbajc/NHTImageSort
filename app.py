@@ -10,7 +10,12 @@ from agents import DescriberAgent, SorterAgent
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+
 def init_db():
+    # Database is stored in a local SQLite file
     conn = sqlite3.connect('nexus_catalog.db')
     c = conn.cursor()
     c.execute('''
@@ -27,7 +32,19 @@ def init_db():
     conn.commit()
     conn.close()
 
+# Initialize the DB before the server starts
 init_db()
+
+@app.route('/api/status', methods=['GET'])
+def get_status():
+    return jsonify({"status": "idle"})
+
+# Add your other routes here (e.g., /api/start, /api/search)
+
+if __name__ == '__main__':
+    # Railway often requires 0.0.0.0 to expose the port
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
 
 # Global state to keep track of sorting progress
 job_state = {
