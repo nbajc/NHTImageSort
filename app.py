@@ -128,5 +128,10 @@ def start_sorting():
 # ... (Keep your other API routes like /api/search exactly as they were) ...
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
+    # Force Railway to recognize the port
+    raw_port = os.environ.get("PORT", 5000)
+    port = int(raw_port)
+    
+    # We MUST use the dynamic port variable here
+    print(f"Starting server on port {port}...")
     app.run(host='0.0.0.0', port=port, debug=False)
