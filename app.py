@@ -8,7 +8,7 @@ from flask_cors import CORS
 from agents import DescriberAgent, SorterAgent
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 def init_db():
     conn = sqlite3.connect('nexus_catalog.db')
