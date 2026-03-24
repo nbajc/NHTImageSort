@@ -150,6 +150,10 @@ def start_sorting():
     
     return jsonify({"message": "Job started successfully"})
 
+@app.route("/api/info", methods=["GET"])
+def get_info():
+    return jsonify({"status": "healthy", "cloud_mode": True})
+
 @app.route("/api/results", methods=["GET"])
 def get_results():
     if job_state["status"] != "completed":
