@@ -1,22 +1,7 @@
-// CloudBanner.jsx
-// Shows a small banner when running in cloud mode (USE_CLOUD=true on Railway).
-// Turns your on-premise pitch into a feature, not a disclaimer.
-
 import { useEffect, useState } from "react";
 import { API_URL } from "./config";
 
 export default function CloudBanner() {
-  const [info, setInfo] = useState(null);
-
-  useEffect(() => {
-    fetch(`${API_URL}/api/info`)
-      .then((r) => r.json())
-      .then(setInfo)
-      .catch(() => {});
-  }, []);
-
-  if (!info || !info.cloud_mode) return null;
-
   return (
     <div
       style={{
@@ -35,8 +20,7 @@ export default function CloudBanner() {
     >
       <span style={{ opacity: 0.7 }}>⬡</span>
       <span>
-        <strong>Cloud demo</strong> — AI powered by OpenAI GPT-4o-mini.
-        Client deployments run <strong>100% on-premise</strong> with Ollama — your data never leaves the network.
+        <strong>Demo Only</strong> — not using airgapped llama - that runs on a local server.
       </span>
     </div>
   );
