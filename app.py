@@ -112,9 +112,43 @@ def get_status(): return jsonify(job_state)
 @app.route("/api/start", methods=["POST"])
 def start_sorting():
     global job_state
-    job_state["status"] = "error"
-    job_state["error"] = "🟢 DEMO MODE: Live AI sorting is disabled. Please explore the pre-indexed catalog."
-    return jsonify({"message": "Job blocked in demo mode."})
+    
+    if job_state["status"] == "running" or job_state["status"] == "starting":
+        return jsonify({"error": "A job is already running."}), 400
+        
+    data = request.json
+    source_dir = data.get("source")
+    target_dir = data.get("target")
+    categories = data.get("categories", [])
+    vision_model = data.get("vision_model", "gpt-4o-mini")
+    text_model = data.get("text_model", "gpt-4o-mini")
+    extensions = data.get("extensions", ["jpg", "jpeg", "png", "webp"])
+    dry_run = data.get("dry_run", False)
+    project_tag = data.get("project_tag", "demo")
+    
+    if not source_dir or not target_dir or not categories:
+        return jsonify({"error": "Missing required fields: source, target, categories"}), 400
+        
+    job_state = {
+        "status": "starting",
+        "current_file": None,
+        "description": None,
+        "category": None,
+        "processed": 0,
+        "total": 0,
+        "results": [],
+        "error": None
+    }
+    
+    # Start thread
+    thread = threading.Thread(
+        target=sort_images_worker,
+        args=(source_dir, target_dir, categories, vision_model, text_model, extensions, dry_run, project_tag)
+    )
+    thread.daemon = True
+    thread.start()
+    
+    return jsonify({"message": "Job started successfully"})
 
 @app.route("/api/results", methods=["GET"])
 def get_results():

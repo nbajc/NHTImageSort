@@ -20,7 +20,7 @@ export default function CloudBanner() {
     >
       <span style={{ opacity: 0.7 }}>⬡</span>
       <span>
-        <strong>Demo Only</strong> — not using airgapped llama - that runs on a local server.
+        <strong>Demo Purposes:</strong> Running OpenAI instead of Llama on a local airgapped server.
       </span>
     </div>
   );
