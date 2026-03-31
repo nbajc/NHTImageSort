@@ -33,13 +33,12 @@ function App() {
   // Catalog State
   const [catalog, setCatalog] = useState<any[]>([]);
 
+  // Use a global or ref to hold the fake job catalog so it can be added later
   const fetchCatalog = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/search`);
-      const data = await res.json();
-      if (data.results) setCatalog(data.results);
-    } catch (err) {
-      console.error("Failed to fetch catalog");
+    // If not completed, start with empty catalog. 
+    // They must click "Start Sorting" to see the magic happen!
+    if (jobState.status !== 'completed') {
+      setCatalog([]);
     }
   };
 
@@ -75,187 +74,86 @@ function App() {
   const [activeTab, setActiveTab] = useState('All');
 
   const fetchStatus = async () => {
-    try {
-      const res = await fetch(`${API_URL}/api/status`);
-      const data = await res.json();
-      setJobState(data);
-      if (data.status === 'completed' || data.status === 'error') {
-        if (pollInterval.current) clearInterval(pollInterval.current);
-      }
-    } catch (err) {
-      console.error("Failed to fetch status");
-    }
+    // Demo mode: Start idle so the user can click the button
+    setJobState(prev => prev.status === 'idle' ? prev : prev);
   };
 
   useEffect(() => {
     fetchStatus();
-    return () => {
-      if (pollInterval.current) clearInterval(pollInterval.current);
-    };
   }, []);
 
   useEffect(() => {
     if (jobState.status === 'completed') {
-      fetchCatalog();
+      const base_url = "https://raw.githubusercontent.com/nbajc/NHTImageSort/main/test_images/";
+      const demoItems = [
+        { file: "PXL_20240613_203500708.jpg", url: base_url + "PXL_20240613_203500708.jpg", category: "Interior", description: "Modern living room corner with a comfortable sofa, natural light coming through a large window, wooden flooring, and a minimalistic side table with a decorative plant.", project_tag: "DemoProject" },
+        { file: "a1326306b8fdb5832a95b5f744e7c435.jpg", url: base_url + "a1326306b8fdb5832a95b5f744e7c435.jpg", category: "Exterior", description: "A beautifully designed residential exterior showing clean architectural lines, warm lighting, and a well-manicured landscape reflecting modern suburban design.", project_tag: "DemoProject" },
+        { file: "309217163.jpg", url: base_url + "309217163.jpg", category: "Hospitality", description: "Luxurious hotel lobby featuring high ceilings, elegant lighting fixtures, plush seating areas, and a grand reception desk designed to impress guests.", project_tag: "Concept" },
+        { file: "d6bbb48541a18623cbbb8cf923e253a6.jpg", url: base_url + "d6bbb48541a18623cbbb8cf923e253a6.jpg", category: "Institutional", description: "A large institutional building corridor characterized by symmetry, reflective flooring, structured lighting, and a clean, sterile architectural approach.", project_tag: "Concept" },
+        { file: "62815477.jpg", url: base_url + "62815477.jpg", category: "Residential", description: "A cozy residential bedroom setup highlighting warm tones, textured fabrics, a large bed with fluffy pillows, and ambient lighting creating a relaxing atmosphere.", project_tag: "DemoProject" },
+        { file: "0-cus-d1-19d7106b40acb3d547653f981a777796.1.jpeg", url: base_url + "0-cus-d1-19d7106b40acb3d547653f981a777796.1.jpeg", category: "Exterior", description: "Architectural exterior detail showing contrasting materials, sharp geometric forms, and a sophisticated facade treatment under bright daylight.", project_tag: "DemoProject" }
+      ];
+      setCatalog(demoItems);
     }
   }, [jobState.status]);
 
   // Search Debounce Effect
   useEffect(() => {
     if (searchQuery.trim().length > 0) {
-      const delayDebounceFn = setTimeout(() => {
-        fetch(`${API_URL}/api/search?q=${encodeURIComponent(searchQuery)}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.results) {
-              setSearchResults(data.results);
-            }
-          })
-          .catch(err => console.error("Search failed", err));
-      }, 300);
-      return () => clearTimeout(delayDebounceFn);
+      const q = searchQuery.toLowerCase();
+      const filtered = catalog.filter(r => 
+        (r.description && r.description.toLowerCase().includes(q)) || 
+        (r.file && r.file.toLowerCase().includes(q)) || 
+        (r.category && r.category.toLowerCase().includes(q)) ||
+        (r.project_tag && r.project_tag.toLowerCase().includes(q))
+      );
+      setSearchResults(filtered);
     } else {
       setSearchResults(null);
     }
-  }, [searchQuery]);
+  }, [searchQuery, catalog]);
 
   const handleStart = async () => {
     if (jobState.status === 'running' || jobState.status === 'starting') return;
     
-    try {
-      localStorage.setItem('nexus_categories', categories);
-      const catArray = categories.split(',').map(c => c.trim()).filter(c => c);
-      await fetch(`${API_URL}/api/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          source,
-          target,
-          categories: catArray,
-          vision_model: visionModel,
-          text_model: textModel,
-          dry_run: dryRun,
-          project_tag: projectTag
-        })
-      });
-      
-      setJobState(prev => ({ ...prev, status: 'starting', processed: 0, results: [], error: null }));
-      setSearchResults(null);
-      setSearchQuery('');
+    // Simulate a fake sorting job!
+    setJobState(prev => ({ ...prev, status: 'starting', processed: 0, total: 6, results: [], error: null }));
+    setSearchResults(null);
+    setSearchQuery('');
+    
+    setTimeout(() => {
+      setJobState(prev => ({ ...prev, status: 'running' }));
+      let currentProgress = 0;
+      const interval = setInterval(() => {
+        currentProgress += 1;
+        setJobState(prev => ({ ...prev, processed: currentProgress }));
+        
+        if (currentProgress >= 6) {
+          clearInterval(interval);
+          setJobState(prev => ({ ...prev, status: 'completed' }));
+          showToast("Demo Sorting Job Completed!");
+        }
+      }, 1500); // Progresses 1 file every 1.5 seconds
       
       if (pollInterval.current) clearInterval(pollInterval.current);
-      pollInterval.current = window.setInterval(fetchStatus, 1000);
-    } catch (err) {
-      setJobState(prev => ({ ...prev, status: 'error', error: "Failed to connect to API" }));
-    }
+      pollInterval.current = interval;
+    }, 1000);
   };
 
   const handleDeleteFolder = async () => {
-    if (!removePath) return;
-    if (!confirm(`Are you sure you want to delete folder: ${removePath}?`)) return;
-    try {
-      const res = await fetch(`${API_URL}/api/delete_folder`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: removePath })
-      });
-      if (res.ok) {
-        alert("Folder deleted successfully.");
-        fetchCatalog();
-        if (searchQuery) setSearchQuery(prev => prev + ' ');
-      }
-      else alert("Error deleting folder.");
-    } catch {
-      alert("Failed to connect to API");
-    }
+    alert("DEMO ONLY: Deleting categories or folders is disabled.");
   };
 
   const handleRemoveDoubles = async () => {
-    if (!confirm("This will permanently scan and delete all physically identical images from your sorted target folders. Only one exact copy will be preserved. Continue?")) return;
-    try {
-      setIsRemovingDoubles(true);
-      const res = await fetch(`${API_URL}/api/remove_doubles`, {
-        method: 'POST'
-      });
-      const data = await res.json();
-      if (res.ok) {
-        alert(data.message);
-        fetchCatalog(); 
-      } else {
-        alert("Error: " + data.error);
-      }
-    } catch {
-      alert("Failed to connect to API");
-    } finally {
-      setIsRemovingDoubles(false);
-    }
+    alert("DEMO ONLY: Deleting duplicates is disabled.");
   };
 
   const handleDeleteItem = async (filePath: string) => {
-    if (!confirm(`Delete image ${filePath}?`)) return;
-    try {
-      const res = await fetch(`${API_URL}/api/delete_item`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: filePath })
-      });
-      if (res.ok) {
-        if (searchResults) {
-          setSearchResults(prev => prev ? prev.filter(r => (r.new_path || r.file) !== filePath) : null);
-        }
-        setCatalog(prev => prev.filter(r => (r.new_path || r.file) !== filePath));
-        setJobState(prev => ({
-          ...prev,
-          results: prev.results.filter(r => (r.new_path || r.file) !== filePath)
-        }));
-      }
-    } catch {
-      alert("Failed to delete item");
-    }
+    alert("DEMO ONLY: Deleting images is not permitted in this demo.");
   };
 
   const handleSaveEdit = async (filePath: string) => {
-    if (!filePath) return;
-    try {
-      let updatedProjectTag: string | undefined = undefined;
-      if (!dryRun) {
-        const res = await fetch(`${API_URL}/api/update_item`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ path: filePath, description: editDesc })
-        });
-        if (!res.ok) {
-           alert("Failed to update description file.");
-           return;
-        }
-        const data = await res.json();
-        updatedProjectTag = data.project_tag;
-      }
-      
-      const updateObj = (r: any) => {
-        if ((r.new_path || r.original_path || r.file) === filePath) {
-          const newR = { ...r, description: editDesc };
-          if (updatedProjectTag !== undefined && updatedProjectTag !== null) {
-            newR.project_tag = updatedProjectTag;
-          }
-          return newR;
-        }
-        return r;
-      };
-
-      if (searchResults) {
-        setSearchResults(prev => prev ? prev.map(updateObj) : null);
-      }
-      setCatalog(prev => prev.map(updateObj));
-      setJobState(prev => ({ ...prev, results: prev.results.map(updateObj) }));
-      
-      // Update modal image if it's the one being edited
-      setModalImage((prev: any) => prev && (prev.new_path || prev.original_path || prev.file) === filePath ? updateObj(prev) : prev);
-      
-      showToast("Description saved successfully!");
-    } catch {
-      alert("Failed to update description");
-    }
+    alert("DEMO ONLY: Modifying descriptions or saving changes is disabled.");
   };
 
   const progressPercent = jobState.total > 0 ? (jobState.processed / jobState.total) * 100 : 0;
@@ -283,7 +181,9 @@ function App() {
            className="bg-black/30 rounded-xl overflow-hidden shadow-lg border border-[#ffffff0a] flex flex-col hover:border-[#ffffff30] hover:ring-1 hover:ring-primary/50 transition-all cursor-pointer group/card relative min-h-[260px]">
         
         <div className="h-[120px] bg-[#110e1a] w-full relative overflow-hidden flex items-center justify-center border-b border-white/5">
-          {!res.placeholder && (res.new_path || res.id) ? (
+          {res.url ? (
+            <img src={res.url} className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-700" alt="thumbnail" />
+          ) : !res.placeholder && (res.new_path || res.id) ? (
             <img src={res.id ? `${API_URL}/api/image?id=${res.id}` : `${API_URL}/api/image?path=${encodeURIComponent(res.new_path)}`} className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-700" alt="thumbnail" />
           ) : (
             <ImageIcon className="w-8 h-8 text-white/20" />
@@ -319,6 +219,24 @@ function App() {
   return (
     <div className="min-h-screen font-sans p-6 md:p-12 selection:bg-primary selection:text-white">
       <CloudBanner />
+      
+      {/* Demo Banner */}
+      <div className="w-full bg-red-600/90 text-white p-4 rounded-xl mb-10 animate-pulse shadow-[0_0_20px_rgba(220,38,38,0.6)] border border-red-400 text-center flex flex-col items-center justify-center gap-2">
+        <div className="flex items-center gap-2">
+          <AlertCircle className="w-6 h-6" />
+          <span className="font-extrabold text-lg uppercase tracking-wider">Demo Version</span>
+        </div>
+        <p className="font-bold text-[0.95rem] tracking-wide">
+          This is demo of the site mechanics - for info purposes only
+        </p>
+        <p className="text-sm font-medium opacity-90 max-w-2xl mx-auto leading-relaxed">
+          For actual outcomes of image description and video of the airgapped demo with custom llama please check Google Drive folder or{' '}
+          <a href="https://youtu.be/s6Gx9XDjQsI" target="_blank" rel="noreferrer" className="underline font-bold text-white hover:text-red-200 transition-colors">
+            https://youtu.be/s6Gx9XDjQsI
+          </a>
+        </p>
+      </div>
+
       <header className="mb-10 text-center md:text-left flex flex-col md:flex-row items-center md:items-start gap-6 lg:gap-8">
         <div className="w-24 h-24 md:w-32 md:h-32 bg-black/40 border border-primary/20 rounded-xl p-3 shadow-[0_0_25px_rgba(236,72,153,0.2)] shrink-0 flex items-center justify-center">
           <img src="/logo.jpg" className="w-full h-full object-contain drop-shadow-[0_0_10px_rgba(236,72,153,0.4)]" alt="Nexus Hestia Logo" />
@@ -327,10 +245,12 @@ function App() {
           <h1 className="text-4xl md:text-[3.5rem] leading-none font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary mb-2">
             Nexus Hestia
           </h1>
-          <h2 className="text-2xl md:text-3xl text-white mb-2 pb-1 font-extrabold uppercase tracking-wide">
+          <h2 className="text-2xl md:text-3xl text-white mb-2 pb-1 font-extrabold uppercase tracking-wide flex items-center gap-3">
             Image Sorter
+            <span className="bg-red-500 text-white text-[0.65em] px-3 py-1 rounded-full animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]">DEMO</span>
           </h2>
-          <p className="text-textMuted text-lg tracking-wide uppercase text-[0.85rem] font-semibold opacity-80">Intelligent local image categorization</p>
+          <p className="text-textMuted text-lg tracking-wide uppercase text-[0.85rem] font-semibold opacity-80 mb-2">Intelligent local image categorization</p>
+          <p className="text-red-400 font-bold text-[0.7rem] uppercase bg-red-500/10 border border-red-500/20 inline-block px-3 py-1.5 rounded self-start">NOT AIRGAPPED - IMAGES PULLED FROM REPOSITORY</p>
         </div>
       </header>
 
@@ -561,7 +481,9 @@ function App() {
             
             {/* Left side: Full Image */}
             <div className="w-full md:w-2/3 bg-black/50 flex flex-col items-center justify-center relative min-h-[300px] border-b md:border-b-0 md:border-r border-white/5 p-4">
-               {!modalImage.placeholder ? (
+               {modalImage.url ? (
+                 <img src={modalImage.url} className="max-w-full max-h-[85vh] object-contain drop-shadow-2xl rounded" alt={modalImage.file} />
+               ) : !modalImage.placeholder ? (
                  <img src={modalImage.id ? `${API_URL}/api/image?id=${modalImage.id}` : `${API_URL}/api/image?path=${encodeURIComponent(modalImage.new_path || modalImage.original_path || ('/path/' + modalImage.file))}`} className="max-w-full max-h-[85vh] object-contain drop-shadow-2xl rounded" alt={modalImage.file} />
                ) : (
                  <div className="flex flex-col items-center text-textMuted opacity-50"><ImageIcon className="w-20 h-20 mb-4"/><span>Placeholder Image</span></div>
